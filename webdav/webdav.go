@@ -216,7 +216,13 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 		return http.StatusInternalServerError, err
 	}
 	w.Header().Set("ETag", etag)
-	// Let ServeContent determine the Content-Type header.
+
+	// Set Content-Type if implemented by f, otherwise let ServeContent
+	// determine the Content-Type header.
+	if m, ok := f.(MIMETyper); ok {
+		w.Header().Set("Content-Type", m.MIMEType())
+	}
+
 	http.ServeContent(w, r, reqPath, fi.ModTime(), f)
 	return 0, nil
 }
@@ -265,7 +271,7 @@ func (h *Handler) handlePut(w http.ResponseWriter, r *http.Request) (status int,
 	// comments in http.checkEtag.
 	ctx := r.Context()
 
-	f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
 		return http.StatusNotFound, err
 	}
@@ -306,7 +312,7 @@ func (h *Handler) handleMkcol(w http.ResponseWriter, r *http.Request) (status in
 	if r.ContentLength > 0 {
 		return http.StatusUnsupportedMediaType, nil
 	}
-	if err := h.FileSystem.Mkdir(ctx, reqPath, 0777); err != nil {
+	if err := h.FileSystem.Mkdir(ctx, reqPath, 0o777); err != nil {
 		if os.IsNotExist(err) {
 			return http.StatusConflict, err
 		}
@@ -459,7 +465,7 @@ func (h *Handler) handleLock(w http.ResponseWriter, r *http.Request) (retStatus 
 
 		// Create the resource if it didn't previously exist.
 		if _, err := h.FileSystem.Stat(ctx, reqPath); err != nil {
-			f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+			f, err := h.FileSystem.OpenFile(ctx, reqPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 			if err != nil {
 				// TODO: detect missing intermediate dirs and return http.StatusConflict?
 				return http.StatusInternalServerError, err

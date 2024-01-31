@@ -55,6 +55,11 @@ type File interface {
 	io.Writer
 }
 
+type MIMETyper interface {
+	MIMEType() string
+}
+
+
 // A Dir implements FileSystem using the native file system restricted to a
 // specific directory tree.
 //
